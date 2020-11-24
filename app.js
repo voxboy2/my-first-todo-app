@@ -1,26 +1,28 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-app.use(bodyParser.json());
 const path = require('path');
 const Joi = require('joi');
 const db = require("./db");
-const { nextTick } = require('process');
 const collection = "todo";
 
 
 const app = express();
+app.use(bodyParser.json());
+
+
+const schema = Joi.object().keys({
+    todo : Joi.string().required()
+});
 
 app.get('/', (req,res)=> {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-const schema = Joi.object().keys({
-    todo : Joi.string().require()
-});
-
 
 app.put('/:id', (req,res) => {
+    // primary key
     const todoID = req.params.id;
+    // document used to update
     const userInput = req.body;
 
     db.getDB().collection(collection).findOneAndUpdate({_id : db.getPrimaryKey(todoID)}, {$set: {todo : userInput.todo}}, {returnOriginal : false}, (err,result) => {
@@ -31,19 +33,18 @@ app.put('/:id', (req,res) => {
         })
 
     })
-app.get('/getTodos', (req,res)=> {
-    // returns our database collection
-    db.getDB().collection(collection).find({}).toArray((err,documents) => {
-      
-        if(err)
-          console.log(err);
-        else {
-           console.log(documents);
-           res.json(documents);
-        }
+
+    app.get('/getTodos',(req,res)=>{
+        // get all Todo documents within our todo collection
+        // send back to user as json
+        db.getDB().collection(collection).find({}).toArray((err,documents)=>{
+            if(err)
+                console.log(err);
+            else{
+                res.json(documents);
+            }
+        });
     });
-       
-});
 
 
 
@@ -116,10 +117,10 @@ app.post('/', (req,res)=> {
 app.delete('/:id', (req,res) => {
     const todoID = req.params.id;
 
-    db.getDB().collection(collection).findOneAndDelete({_id})
-
-    if(err)
-      console.log(err);
-    else
-       res.json(result);
-})
+    db.getDB().collection(collection).findOneAndDelete({_id : db.getPrimaryKey(todoID)},(err,result)=>{
+        if(err)
+            console.log(err);
+        else
+            res.json(result);
+    });
+});
